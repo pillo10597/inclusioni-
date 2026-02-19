@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Scanner fibra (JSFeat)</title>
+  <style>
+    body { margin: 0; background: #111; color: #eee; text-align: center; font-family: sans-serif; }
+    video, canvas { max-width: 100%; }
+  </style>
+</head>
+<body>
+  <h3>Scanner inclusioni / stramature (JSFeat)</h3>
+  <video id="video" autoplay playsinline></video>
+  <canvas id="canvas"></canvas>
+
+
+  <script src="https://inspirit.github.io/jsfeat/build/jsfeat-min.js"></script>
+  <script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+
+    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+      video.srcObject = stream;
+      video.addEventListener('loadedmetadata', () => {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        requestAnimationFrame(loop);
+      });
+    }).catch(err => {
+      alert('Errore accesso fotocamera: ' + err);
+    });
+
+
+    function loop() {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+
+      const gray = new jsfeat.matrix_t(canvas.width, canvas.height, jsfeat.U8_t | jsfeat.C1_t);
+      jsfeat.imgproc.grayscale(imgData.data, canvas.width, canvas.height, gray);
+
+
+      const edge = new jsfeat.matrix_t(canvas.width, canvas.height, jsfeat.U8_t | jsfeat.C1_t);
+      jsfeat.imgproc.canny(gray, edge, 20, 50); // bordi → stramature / rotture
+
+
+      for (let i = 0; i < edge.data.length; i++) {
+        const v = edge.data[i];
+        imgData.data[i * 4 + 0] = v;
+        imgData.data[i * 4 + 1] = v;
+        imgData.data[i * 4 + 2] = v;
+        imgData.data[i * 4 + 3] = 255;
+      }
+      ctx.putImageData(imgData, 0, 0);
+
+
+      requestAnimationFrame(loop);
+    }
+  </script>
+</body>
+</html>
+
